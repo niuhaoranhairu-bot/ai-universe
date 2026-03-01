@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Metaverse - 牛牛的智能导航</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #000000;
+            --color-text: #FFD700;    
+            --color-image: #00f0ff;   
+            --color-video: #b400ff;   
+            --color-audio: #ff007f;   
+            --color-avatar: #00ff82;  
+            --color-browser: #4facfe; 
+            --color-know: #f6d365;    
+            --color-code: #ff5e62;    
+            --color-agent: #a18cd1;   
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at center, #0a1122 0%, #000000 100%);
+            font-family: 'Noto Sans SC', sans-serif;
+            color: white;
+            user-select: none;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none;
+        }
+        #bg-canvas { z-index: 1; }
+        
+        /* 交互层：移除模糊，改用Canvas阴影实现柔顺光晕 */
+        #interactive-canvas { 
+            z-index: 5; 
+            transition: opacity 1s ease;
+        }
+
+        /* ================= 布局与比例 ================= */
+        header {
+            position: relative;
+            z-index: 20;
+            padding: 100px 40px 100px 40px; 
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 1s ease;
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            z-index: 50;
+            padding: 8px 24px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            letter-spacing: 3px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .back-btn:hover {
+            color: #ffffff;
+            border-color: #00f0ff;
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+            padding-left: 32px;
+        }
+
+        .header-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .main-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 12px;
+            color: #ffffff;
+            margin-bottom: 24px; 
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(0, 240, 255, 0.3);
+        }
+
+        /* 二级页面副标题渐变底 */
+        .sub-title {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.8);
+            font-weight: 400;
+            letter-spacing: 8px;
+            padding: 10px 60px;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.06) 50%, transparent 100%);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(20px);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        #dashboard-container {
+            position: relative;
+            z-index: 10;
+            height: calc(100vh - 350px);
+            padding: 0 80px 80px 80px;
+            display: flex;
+            gap: 40px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        }
+
+        #dashboard-container::-webkit-scrollbar { display: none; }
+
+        .category-col {
+            min-width: 230px;
+            width: 230px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .category-header {
+            font-size: 0.9rem;
+            font-weight: 700;
+            padding-bottom: 12px;
+            margin-bottom: 25px;
+            border-bottom: 2px solid; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            letter-spacing: 5px;
+            text-transform: uppercase;
+        }
+
+        .items-container {
+            flex: 1;
+            min-height: 0; 
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-bottom: 20px;
+        }
+
+        .ai-card {
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05); 
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 6px;
+            padding: 10px 16px;
+            text-decoration: none;
+            color: rgba(255, 255, 255, 0.75);
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
+            flex-shrink: 0;
+            min-height: 52px;
+        }
+
+        .ai-card:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            transform: translateX(6px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        .card-icon {
+            width: 24px; 
+            height: 24px;
+            border-radius: 4px;
+            margin-right: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            flex-shrink: 0;
+            background: #111;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-icon img { width: 100%; height: 100%; object-fit: contain; }
+
+        .card-name {
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* ================= 首页 ================= */
+        #landing-view {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            transition: all 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .landing-hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-50px) scale(1.1);
+            filter: blur(40px);
+        }
+
+        #dashboard-view {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 1.5s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+        }
+
+        .dashboard-active {
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+
+        .landing-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3rem; 
+            font-weight: 700;
+            color: #ffffff;
+            letter-spacing: 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .landing-subtitle {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 300;
+            letter-spacing: 12px;
+            margin-bottom: 120px;
+            padding: 14px 80px;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            text-align: center;
+        }
+
+        .enter-btn {
+            padding: 12px 50px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+            letter-spacing: 6px;
+        }
+
+        .enter-btn:hover {
+            border-color: #00f0ff;
+            letter-spacing: 10px;
+            box-shadow: 0 0 40px rgba(0, 240, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+    <canvas id="interactive-canvas"></canvas>
+
+    <div id="landing-view">
+        <h1 class="landing-title">AI METAVERSE</h1>
+        <h2 class="landing-subtitle">牛牛的AI工具元宇宙</h2>
+        <button id="enter-btn" class="enter-btn">ENTER SYSTEM</button>
+    </div>
+
+    <div id="dashboard-view">
+        <button id="back-btn" class="back-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            RETURN
+        </button>
+        <header>
+            <div class="header-container">
+                <h1 class="main-title">AI METAVERSE</h1>
+                <div class="sub-title">牛牛的AI工具元宇宙</div>
+            </div>
+        </header>
+        <div id="dashboard-container"></div>
+    </div>
+
+<script>
+    // --- 数据配置 ---
+    const toolData = [
+        { category: "文本", color: "var(--color-text)", items: [{ name: "Gemini", url: "https://gemini.google.com/" }, { name: "豆包", url: "https://www.doubao.com/", icon: "https://www.doubao.com/favicon.ico" }, { name: "Qwen", url: "https://tongyi.aliyun.com/" }, { name: "ChatGPT", url: "https://chatgpt.com/" }, { name: "Grok", url: "https://grok.com/" }, { name: "Deepseek", url: "https://www.deepseek.com/" }, { name: "Claude", url: "https://claude.ai/" }, { name: "Kimi", url: "https://kimi.moonshot.cn/", icon: "https://kimi.moonshot.cn/favicon.ico" }, { name: "Minimax", url: "https://agent.minimaxi.com/", icon: "https://www.google.com/s2/favicons?sz=128&domain=minimaxi.com" }, { name: "LMArena", url: "https://lmarena.ai/", icon: "https://lmarena.ai/favicon.ico" }] },
+        { category: "图像", color: "var(--color-image)", items: [{ name: "Nano Banana Pro", url: "https://imini.com/zh/nano-banana" }, { name: "即梦AI", url: "https://jimeng.jianying.com/", icon: "https://jimeng.jianying.com/favicon.ico" }, { name: "腾讯 IMA", url: "https://ima.tencent.com/", icon: "https://ima.tencent.com/favicon.ico" }, { name: "Midjourney", url: "https://www.midjourney.com/" }, { name: "flux", url: "https://blackforestlabs.ai/" }, { name: "Tripo AI", url: "https://www.tripo3d.ai/" }, { name: "PINTR", url: "https://pintr.app/" }, { name: "ComfyUI", url: "https://github.com/comfyanonymous/ComfyUI", icon: "https://ui-avatars.com/api/?name=CU&background=4f46e5&color=fff&size=128&bold=true" }, { name: "Magnific AI", url: "https://magnific.ai/" }, { name: "Meshy", url: "https://www.meshy.ai/" }, { name: "Krea AI", url: "https://www.krea.ai/" }, { name: "Recraft", url: "https://www.recraft.ai/" }, { name: "Topaz Labs", url: "https://www.topazlabs.com/" }] },
+        { category: "视频", color: "var(--color-video)", items: [{ name: "Veo 3.1", url: "https://deepmind.google/technologies/veo/" }, { name: "Seedance 2.0", url: "https://jimeng.jianying.com/", icon: "https://jimeng.jianying.com/favicon.ico" }, { name: "Wan 2.2 开源模型", url: "https://www.modelscope.cn/", icon: "https://www.modelscope.cn/favicon.ico" }, { name: "Runway Gen", url: "https://runwayml.com/" }, { name: "可灵", url: "https://klingai.kuaishou.com/", icon: "https://klingai.kuaishou.com/favicon.ico" }, { name: "Sora 2", url: "https://sora.com/" }, { name: "海螺AI", url: "https://hailuoai.com/video", icon: "https://hailuoai.com/favicon.ico" }, { name: "Vidu", url: "https://www.vidu.cn/create", icon: "https://www.google.com/s2/favicons?sz=128&domain=vidu.studio" }, { name: "Higgsfield", url: "https://higgsfield.ai/" }, { name: "Wonder Studio", url: "https://wonderdynamics.com/" }, { name: "Pika", url: "https://pika.art/" }, { name: "PixVerse", url: "https://pixverse.ai/" }, { name: "Beeble", url: "https://beeble.ai/" }, { name: "TapNow", url: "https://www.tapnow.ai/", icon: "https://www.tapnow.ai/favicon.ico" }, { name: "去水印", url: "https://magiceraser.org/zh/seedance-watermark-remover/" }] },
+        { category: "音频", color: "var(--color-audio)", items: [{ name: "Minimax", url: "https://www.minimaxi.com/audio", icon: "https://www.google.com/s2/favicons?sz=128&domain=minimaxi.com" }, { name: "ElevenLabs", url: "https://elevenlabs.io/" }, { name: "CosyVoice2 0.5B", url: "https://github.com/FunAudioLLM/CosyVoice", icon: "https://ui-avatars.com/api/?name=CV&background=e11d48&color=fff&size=128&bold=true" }, { name: "Suno", url: "https://suno.com/" }, { name: "Udio", url: "https://www.udio.com/" }, { name: "Stable Audio", url: "https://stableaudio.com/" }, { name: "Moises", url: "https://moises.ai/" }] },
+        { category: "数字人", color: "var(--color-avatar)", items: [{ name: "HeyGen", url: "https://app.heygen.com/" }, { name: "Synthesia", url: "https://www.synthesia.io/" }, { name: "OmniHuman", url: "https://omnihuman-lab.github.io/", icon: "https://ui-avatars.com/api/?name=Omni&background=0ea5e9&color=fff&size=128&bold=true" }] },
+        { category: "浏览器", color: "var(--color-browser)", items: [{ name: "夸克", url: "https://quark.sm.cn/", icon: "https://quark.sm.cn/favicon.ico" }, { name: "豆包", url: "https://www.doubao.com/" }, { name: "QQ浏览器", url: "https://browser.qq.com/" }] },
+        { category: "知识库", color: "var(--color-know)", items: [{ name: "NotebookLM", url: "https://notebooklm.google.com/" }, { name: "腾讯 IMA", url: "https://ima.tencent.com/", icon: "https://ima.tencent.com/favicon.ico" }, { name: "飞书", url: "https://www.feishu.cn/" }, { name: "Notion AI", url: "https://www.notion.so/" }, { name: "RAG Flow", url: "https://ragflow.io/" }, { name: "Obsidian", url: "https://obsidian.md/" }, { name: "Cherry Studio", url: "https://cherry-ai.com/" }] },
+        { category: "编程", color: "var(--color-code)", items: [{ name: "Cursor", url: "https://www.cursor.com/" }, { name: "Trae", url: "https://www.trae.ai/" }, { name: "Claude Code", url: "https://claude.ai/" }, { name: "GitHub Copilot", url: "https://github.com/features/copilot" }, { name: "Gemini Studio", url: "https://aistudio.google.com/" }, { name: "CodeX", url: "https://platform.openai.com/" }] },
+        { category: "AGENT", color: "var(--color-agent)", items: [{ name: "CodeX", url: "https://platform.openai.com/" }, { name: "AutoGLM", url: "https://chatglm.cn/" }, { name: "n8n", url: "https://n8n.io/" }, { name: "扣子", url: "https://www.coze.cn/" }, { name: "GenSpark", url: "https://www.genspark.ai/" }, { name: "Manus", url: "https://manus.im/" }, { name: "Lovart", url: "https://www.lovart.ai/" }] }
+    ];
+
+    const getDomain = (url) => { if (!url || url === '#') return null; try { return new URL(url).hostname; } catch(e) { return null; }};
+
+    const dashboard = document.getElementById('dashboard-container');
+    toolData.forEach(cat => {
+        const col = document.createElement('div');
+        col.className = 'category-col';
+        col.innerHTML = `<div class="category-header" style="color:${cat.color}; border-color:${cat.color}">${cat.category}</div>`;
+        const itemsWrapper = document.createElement('div');
+        itemsWrapper.className = 'items-container';
+
+        cat.items.forEach(item => {
+            const card = document.createElement('a');
+            card.className = 'ai-card';
+            card.href = item.url !== '#' ? item.url : 'javascript:void(0)';
+            if(item.url !== '#' && item.url.startsWith('http')) card.target = '_blank';
+            
+            const domain = getDomain(item.url);
+            const pureColor = cat.color.includes('--') ? getComputedStyle(document.documentElement).getPropertyValue(cat.color.replace('var(','').replace(')','')).trim() : cat.color;
+            
+            const sources = [
+                item.icon,
+                domain ? `https://www.google.com/s2/favicons?sz=128&domain=${domain}` : null,
+                domain ? `https://icon.horse/icon/${domain}` : null,
+                `https://ui-avatars.com/api/?name=${item.name[0]}&background=${pureColor.replace('#','')}&color=fff&size=128&bold=true`
+            ].filter(Boolean);
+
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'card-icon';
+            const img = document.createElement('img');
+            let currentIdx = 0;
+            img.src = sources[currentIdx];
+            img.onerror = () => { currentIdx++; if (currentIdx < sources.length) img.src = sources[currentIdx]; };
+            
+            iconDiv.appendChild(img);
+            card.appendChild(iconDiv);
+            card.insertAdjacentHTML('beforeend', `<div class="card-info"><div class="card-name">${item.name}</div></div>`);
+            
+            card.addEventListener('mouseenter', () => {
+                card.style.borderColor = `${pureColor}80`;
+                card.style.boxShadow = `0 8px 30px ${pureColor}25`;
+            });
+            card.addEventListener('mouseleave', () => {
+                card.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                card.style.boxShadow = 'none';
+            });
+            itemsWrapper.appendChild(card);
+        });
+        col.appendChild(itemsWrapper);
+        dashboard.appendChild(col);
+    });
+
+    // --- 浩瀚星空背景 ---
+    const bgCanvas = document.getElementById('bg-canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    let stars = [], shootingStars = [];
+
+    class Star {
+        constructor() { this.reset(); }
+        reset() {
+            this.x = Math.random() * bgCanvas.width;
+            this.y = Math.random() * bgCanvas.height;
+            this.layer = Math.floor(Math.random() * 3);
+            this.size = (Math.random() * 0.5 + 0.1) * (this.layer + 1); 
+            this.alpha = Math.random();
+            this.fadeSpeed = (Math.random() * 0.01 + 0.005);
+            this.moveSpeed = (this.layer + 1) * 0.015;
+            this.colors = ['255,255,255', '200,230,255', '255,240,220', '230,210,255'];
+            this.color = this.colors[Math.floor(Math.random() * this.colors.length)];
+        }
+        update() {
+            this.alpha += this.fadeSpeed;
+            if (this.alpha > 1 || this.alpha < 0.1) this.fadeSpeed *= -1;
+            this.x -= this.moveSpeed;
+            if (this.x < 0) this.x = bgCanvas.width;
+        }
+        draw() {
+            bgCtx.fillStyle = `rgba(${this.color}, ${Math.abs(this.alpha)})`;
+            bgCtx.beginPath(); bgCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2); bgCtx.fill();
+        }
+    }
+
+    class ShootingStar {
+        constructor() { this.active = false; }
+        launch() {
+            this.active = true;
+            this.x = Math.random() * bgCanvas.width;
+            this.y = Math.random() * bgCanvas.height * 0.3;
+            this.len = Math.random() * 100 + 50;
+            this.speed = Math.random() * 10 + 10;
+            this.opacity = 1;
+        }
+        update() {
+            if (!this.active) return;
+            this.x -= this.speed; this.y += this.speed * 0.3; this.opacity -= 0.015;
+            if (this.opacity <= 0) this.active = false;
+        }
+        draw() {
+            if (!this.active) return;
+            const grad = bgCtx.createLinearGradient(this.x, this.y, this.x + this.len, this.y - this.len * 0.3);
+            grad.addColorStop(0, `rgba(255, 255, 255, ${this.opacity})`);
+            grad.addColorStop(1, "transparent");
+            bgCtx.strokeStyle = grad; bgCtx.lineWidth = 1.2;
+            bgCtx.beginPath(); bgCtx.moveTo(this.x, this.y); bgCtx.lineTo(this.x + this.len, this.y - this.len * 0.3); bgCtx.stroke();
+        }
+    }
+
+    function initBg() {
+        bgCanvas.width = window.innerWidth; bgCanvas.height = window.innerHeight;
+        stars = Array.from({length: 1200}, () => new Star());
+        shootingStars = Array.from({length: 3}, () => new ShootingStar());
+    }
+
+    function animateBg() {
+        bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+        stars.forEach(s => { s.update(); s.draw(); });
+        shootingStars.forEach(ss => { ss.update(); ss.draw(); if(!ss.active && Math.random() < 0.001) ss.launch(); });
+        requestAnimationFrame(animateBg);
+    }
+
+    // --- 首页互动交互：液态柔顺拖尾 (修复直线Bug) ---
+    const iCanvas = document.getElementById('interactive-canvas');
+    const iCtx = iCanvas.getContext('2d');
+    let mouse = { x: null, y: null }, trail = [], hue = 320;
+    let initialReady = false; // 强力标识：防止初始化瞬间的跳变
+
+    function initInteractive() { iCanvas.width = window.innerWidth; iCanvas.height = window.innerHeight; }
+
+    window.addEventListener('mousemove', e => {
+        const mx = e.clientX;
+        const my = e.clientY;
+
+        if (mouse.x === null) {
+            // 第一次进入：只记录坐标，不写轨迹，不画线
+            mouse.x = mx;
+            mouse.y = my;
+            return;
+        }
+
+        // 计算这一帧移动的物理距离
+        const dist = Math.hypot(mx - mouse.x, my - mouse.y);
+
+        // 如果距离超过 300px，视为“瞬间跳变”（比如刚切屏回来），直接重置坐标不画线
+        if (dist > 300) {
+            mouse.x = mx;
+            mouse.y = my;
+            return;
+        }
+
+        // 合法移动：推入轨迹
+        trail.push({ x: mx, y: my, age: 0 });
+        mouse.x = mx;
+        mouse.y = my;
+        initialReady = true;
+    });
+
+    function animateInteractive() {
+        iCtx.clearRect(0, 0, iCanvas.width, iCanvas.height);
+        hue += 0.45;
+        
+        if (mouse.x !== null && initialReady) {
+            // 1. 高亮核心光晕
+            const glowRadius = 800; 
+            const grad = iCtx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, glowRadius);
+            grad.addColorStop(0, `hsla(${hue}, 100%, 75%, 0.35)`); 
+            grad.addColorStop(0.2, `hsla(${hue + 45}, 100%, 65%, 0.15)`);
+            grad.addColorStop(0.6, `hsla(${hue + 90}, 100%, 55%, 0.02)`);
+            grad.addColorStop(1, 'transparent');
+            
+            iCtx.globalCompositeOperation = "screen"; 
+            iCtx.fillStyle = grad; 
+            iCtx.fillRect(0, 0, iCanvas.width, iCanvas.height);
+
+            // 2. 液态拖尾渲染
+            if (trail.length > 4) {
+                // 使用二次贝塞尔曲线进行路径平滑插值
+                iCtx.shadowBlur = 20;
+                iCtx.shadowColor = `hsla(${hue}, 100%, 70%, 0.6)`;
+                
+                for (let i = 1; i < trail.length - 2; i++) {
+                    const p = trail[i];
+                    p.age += 1.4; 
+                    const life = Math.max(0, 1 - p.age / 50);
+                    if (life <= 0) { trail.splice(i, 1); continue; }
+
+                    // 再次检查相邻点的物理距离，双重保险消除直线
+                    if (Math.hypot(trail[i].x - trail[i-1].x, trail[i].y - trail[i-1].y) > 200) continue;
+
+                    const xc = (trail[i].x + trail[i + 1].x) / 2;
+                    const yc = (trail[i].y + trail[i + 1].y) / 2;
+
+                    iCtx.beginPath();
+                    iCtx.lineJoin = 'round';
+                    iCtx.lineCap = 'round';
+                    iCtx.strokeStyle = `hsla(${hue + i * 1.5}, 100%, 80%, ${life * 0.8})`; 
+                    iCtx.lineWidth = life * 24; 
+                    
+                    iCtx.moveTo(trail[i-1].x, trail[i-1].y);
+                    iCtx.quadraticCurveTo(trail[i].x, trail[i].y, xc, yc);
+                    iCtx.stroke();
+                }
+                iCtx.shadowBlur = 0; 
+            }
+        }
+        requestAnimationFrame(animateInteractive);
+    }
+
+    window.onload = () => { initBg(); initInteractive(); animateBg(); animateInteractive(); };
+    window.onresize = () => { initBg(); initInteractive(); };
+
+    const landingView = document.getElementById('landing-view');
+    const dashboardView = document.getElementById('dashboard-view');
+
+    document.getElementById('enter-btn').addEventListener('click', () => {
+        landingView.classList.add('landing-hidden');
+        dashboardView.classList.add('dashboard-active');
+        iCanvas.style.opacity = "0.2"; 
+    });
+
+    document.getElementById('back-btn').addEventListener('click', () => {
+        dashboardView.classList.remove('dashboard-active');
+        landingView.classList.remove('landing-hidden');
+        iCanvas.style.opacity = "1";
+    });
+
+    dashboard.addEventListener('wheel', (e) => {
+        const list = e.target.closest('.items-container');
+        if (list && list.scrollHeight > list.clientHeight && Math.abs(e.deltaY) > Math.abs(e.deltaX)) return;
+        if(e.deltaY !== 0) { e.preventDefault(); dashboard.scrollLeft += e.deltaY; }
+    }, { passive: false });
+</script>
+</body>
+</html>
